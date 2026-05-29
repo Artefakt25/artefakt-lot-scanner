@@ -1,6 +1,3 @@
-const { formidable } = require('formidable');
-const fs = require('fs');
-
 const PROMPT = `You are reading a gallery price list. Extract every artwork lot and return ONLY a JSON array — no text before or after, no markdown fences.
 
 Each lot must follow this exact shape:
@@ -27,18 +24,11 @@ Rules:
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const form = formidable({ maxFileSize: 25 * 1024 * 1024 });
-
   try {
-    const [, files] = await form.parse(req);
-    const file = files.file[0];
-    if (!file) return res.status(400).json({ error: 'No file received' });
+    const { base64, mimetype } = req.body;
+    if (!base64 || !mimetype) return res.status(400).json({ error: 'Missing file data' });
 
-    const buffer = fs.readFileSync(file.filepath);
-    const base64 = buffer.toString('base64');
-    const isPdf = file.mimetype === 'application/pdf';
-
-    // Use Google Gemini for image/PDF reading
+    const isPdf = mimetype === 'application/pdf';
     const apiKey = process.env.GEMINI_API_KEY;
     const model = 'gemini-2.0-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -49,7 +39,7 @@ module.exports = async (req, res) => {
           { text: PROMPT }
         ]
       : [
-          { inline_data: { mime_type: file.mimetype, data: base64 } },
+          { inline_data: { mime_type: mimetype, data: base64 } },
           { text: PROMPT }
         ];
 
@@ -60,7 +50,6 @@ module.exports = async (req, res) => {
     });
 
     const data = await response.json();
-
     if (data.error) throw new Error(data.error.message);
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
@@ -74,5 +63,3 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 };
-
-module.exports.config = { api: { bodyParser: false } };
