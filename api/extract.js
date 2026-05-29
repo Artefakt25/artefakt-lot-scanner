@@ -1,24 +1,7 @@
-const Anthropic = require('@anthropic-ai/sdk');
 const formidable = require('formidable');
 const fs = require('fs');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-module.exports = async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).end();
-
-  const form = formidable({ maxFileSize: 25 * 1024 * 1024 });
-
-  try {
-    const [, files] = await form.parse(req);
-    const file = files.file[0];
-    if (!file) return res.status(400).json({ error: 'No file received' });
-
-    const buffer = fs.readFileSync(file.filepath);
-    const base64 = buffer.toString('base64');
-    const isPdf = file.mimetype === 'application/pdf';
-
-    const PROMPT = `You are reading a gallery price list. Extract every artwork lot and return ONLY a JSON array — no text before or after, no markdown fences.
+const PROMPT = `You are reading a gallery price list. Extract every artwork lot and return ONLY a JSON array — no text before or after, no markdown fences.
 
 Each lot must follow this exact shape:
 {
@@ -41,23 +24,46 @@ Rules:
 - If the same artist appears multiple times, include one entry per artwork.
 - Do not infer or guess values not present in the document.`;
 
-    const content = isPdf
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') return res.status(405).end();
+
+  const form = formidable({ maxFileSize: 25 * 1024 * 1024 });
+
+  try {
+    const [, files] = await form.parse(req);
+    const file = files.file[0];
+    if (!file) return res.status(400).json({ error: 'No file received' });
+
+    const buffer = fs.readFileSync(file.filepath);
+    const base64 = buffer.toString('base64');
+    const isPdf = file.mimetype === 'application/pdf';
+
+    // Use Google Gemini for image/PDF reading
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = 'gemini-2.0-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const parts = isPdf
       ? [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-          { type: 'text', text: PROMPT }
+          { inline_data: { mime_type: 'application/pdf', data: base64 } },
+          { text: PROMPT }
         ]
       : [
-          { type: 'image', source: { type: 'base64', media_type: file.mimetype, data: base64 } },
-          { type: 'text', text: PROMPT }
+          { inline_data: { mime_type: file.mimetype, data: base64 } },
+          { text: PROMPT }
         ];
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content }]
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts }] })
     });
 
-    const text = response.content.find(b => b.type === 'text')?.text || '[]';
+    const data = await response.json();
+
+    if (data.error) throw new Error(data.error.message);
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
     const clean = text.replace(/```json|```/g, '').trim();
     const lots = JSON.parse(clean);
 
