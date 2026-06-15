@@ -18,10 +18,11 @@
     .btn:active { opacity: 0.75; transform: scale(0.98); }
     .btn-primary { background: #1a1a1a; color: #fff; }
     .btn-secondary { background: #fff; color: #1a1a1a; border: 1.5px solid #e0e0de; }
-    .field-group { margin-bottom: 14px; }
+    .field-group { margin-bottom: 14px; position: relative; }
     .field-label { font-size: 11px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
     .field-input { width: 100%; padding: 13px 14px; border-radius: 11px; border: 1.5px solid #e0e0de; font-size: 16px; background: #fff; color: #1a1a1a; -webkit-appearance: none; appearance: none; }
     .field-input:focus { outline: none; border-color: #1a1a1a; }
+    .field-input.matched { border-color: #2a7d35; background: #f6fdf6; }
     select.field-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
     .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1.5px solid #ebebea; }
     .card-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
@@ -33,10 +34,11 @@
     .match-low { background: #fdecea; color: #b52a2a; }
     .artist-found-name { font-size: 20px; font-weight: 600; margin-bottom: 3px; }
     .artist-db-name { font-size: 15px; color: #444; margin-bottom: 10px; }
-    .search-results { border: 1.5px solid #e0e0de; border-radius: 11px; overflow: hidden; margin-top: 6px; display: none; background: #fff; }
+    .search-results { border: 1.5px solid #e0e0de; border-radius: 11px; overflow: hidden; margin-top: 4px; display: none; background: #fff; z-index: 10; position: relative; }
     .search-result-item { padding: 13px 14px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #f4f4f2; }
     .search-result-item:last-child { border-bottom: none; }
     .search-result-item:active { background: #f5f5f0; }
+    .search-result-sub { font-size: 12px; color: #999; margin-top: 2px; }
     .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
     .tag-emerging { background: #e9f5ea; color: #2a7d35; }
     .tag-mid { background: #e3f0fd; color: #1558a8; }
@@ -47,6 +49,7 @@
     .center { text-align: center; }
     .muted { color: #999; font-size: 14px; }
     .warning-box { background: #fffbe6; border: 1.5px solid #ffe082; border-radius: 11px; padding: 12px 14px; font-size: 13px; color: #6b4f00; margin-bottom: 14px; line-height: 1.5; }
+    .gallery-matched-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; background: #e9f5ea; color: #2a7d35; margin-top: 6px; }
     .success-check { width: 56px; height: 56px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
     .success-check svg { width: 26px; height: 26px; }
     .step-label { font-size: 12px; color: #999; text-align: center; margin-bottom: 6px; }
@@ -56,26 +59,26 @@
   </style>
 </head>
 <body>
+
 <div class="screen active" id="screen-home">
   <div class="header">
     <div class="logo">Artefakt</div>
     <div class="title">Lot Scanner</div>
   </div>
   <div class="field-group">
-    <div class="field-label">Gallery name</div>
-    <input type="text" id="gallery-name" class="field-input" placeholder="e.g. Galleri Nicolai Wallner" autocomplete="off" autocorrect="off">
-  </div>
-  <div class="field-group">
-    <div class="field-label">City (optional)</div>
-    <input type="text" id="gallery-city" class="field-input" placeholder="e.g. Copenhagen" autocorrect="off">
+    <div class="field-label">Gallery / Institution (optional)</div>
+    <input type="text" id="gallery-name" class="field-input" placeholder="e.g. Hans Alf, Kunstakademiet..." autocomplete="off" autocorrect="off" oninput="searchGalleries(this.value)">
+    <div class="search-results" id="gallery-results"></div>
+    <div id="gallery-matched-indicator"></div>
   </div>
   <div class="divider"></div>
-  <button class="btn btn-primary" onclick="document.getElementById('camera-input').click()">Take photo of lot list</button>
-  <button class="btn btn-secondary" onclick="document.getElementById('file-input').click()">Upload PDF or image</button>
+  <button class="btn btn-primary" onclick="handleScanClick('camera-input')">Take photo of lot list</button>
+  <button class="btn btn-secondary" onclick="handleScanClick('file-input')">Upload PDF or image</button>
   <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleFile(this)">
   <input type="file" id="file-input" accept="image/*,application/pdf" onchange="handleFile(this)">
   <p class="muted center" style="margin-top:28px; font-size:12px;" id="status-line">Loading artist database…</p>
 </div>
+
 <div class="screen" id="screen-processing">
   <div style="padding-top:38%; text-align:center;">
     <div class="spinner"></div>
@@ -83,6 +86,7 @@
     <div class="muted">Usually takes 5–10 seconds</div>
   </div>
 </div>
+
 <div class="screen" id="screen-artist">
   <div class="header">
     <div class="logo">Artefakt · Confirm artist</div>
@@ -105,9 +109,10 @@
     <input type="text" id="artist-search" class="field-input" placeholder="Type name to search…" oninput="searchArtists(this.value)" autocorrect="off">
     <div class="search-results" id="search-results"></div>
   </div>
-  <button class="btn btn-primary" id="confirm-artist-btn" onclick="confirmArtist()">Confirm and continue →</button>
+  <button class="btn btn-primary" onclick="confirmArtist()">Confirm and continue →</button>
   <button class="btn btn-secondary" onclick="showAddArtist()">+ Add new artist to database</button>
 </div>
+
 <div class="screen" id="screen-add-artist">
   <div class="header">
     <div class="logo">Artefakt</div>
@@ -149,6 +154,7 @@
   <button class="btn btn-primary" onclick="saveNewArtist()">Save artist and continue →</button>
   <button class="btn btn-secondary" onclick="showScreen('screen-artist')">← Back</button>
 </div>
+
 <div class="screen" id="screen-lots">
   <div class="header">
     <div class="logo">Artefakt · Review lots</div>
@@ -159,12 +165,14 @@
   <button class="btn btn-primary" onclick="confirmLots()">Save <span id="save-lots-count"></span> lots →</button>
   <button class="btn btn-secondary" onclick="goBackToArtist()">← Back to artist</button>
 </div>
+
 <div class="screen" id="screen-saving">
   <div style="padding-top:38%; text-align:center;">
     <div class="spinner"></div>
     <div style="font-size:17px; font-weight:500;">Saving to Artefakt…</div>
   </div>
 </div>
+
 <div class="screen" id="screen-done">
   <div style="padding-top:28%; text-align:center; padding-bottom:40px;">
     <div class="success-check">
@@ -175,16 +183,22 @@
     <button class="btn btn-primary" onclick="resetApp()">Scan another lot list</button>
   </div>
 </div>
+
 <script>
-let allArtists = [], artistGroups = [], currentGroupIndex = 0, currentMatch = null, pendingLots = [], currentLotsIndex = 0;
+let allArtists = [], allGalleries = [], artistGroups = [], currentGroupIndex = 0;
+let currentMatch = null, pendingLots = [], currentLotsIndex = 0;
+let selectedGallery = null;
+
 async function boot() {
   try {
-    const res = await fetch('/api/artists');
-    allArtists = await res.json();
+    const [artRes, galRes] = await Promise.all([fetch('/api/artists'), fetch('/api/galleries')]);
+    allArtists = await artRes.json();
+    allGalleries = await galRes.json();
     document.getElementById('status-line').textContent = allArtists.length + ' artists loaded';
     setTimeout(() => { document.getElementById('status-line').style.opacity = '0'; }, 2500);
-  } catch(e) { document.getElementById('status-line').textContent = 'Could not load artists'; }
+  } catch(e) { document.getElementById('status-line').textContent = 'Could not load database'; }
 }
+
 function norm(s) { return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
 function lev(a,b) {
   const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
@@ -194,36 +208,228 @@ function lev(a,b) {
 }
 function similarity(a,b){const na=norm(a),nb=norm(b);if(na===nb)return 1;const dist=lev(na,nb);return 1-dist/Math.max(na.length,nb.length,1);}
 function bestMatch(name){let top=null,topScore=0;for(const a of allArtists){const s=similarity(name,a.full_name);if(s>topScore){topScore=s;top=a;}}return{artist:top,score:topScore};}
+
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 function esc(s){return(s||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
-function resetApp(){artistGroups=[];currentGroupIndex=0;currentMatch=null;pendingLots=[];document.getElementById('gallery-name').value='';document.getElementById('gallery-city').value='';showScreen('screen-home');}
+
+function resetApp(){
+  artistGroups=[];currentGroupIndex=0;currentMatch=null;pendingLots=[];selectedGallery=null;
+  document.getElementById('gallery-name').value='';
+  document.getElementById('gallery-name').classList.remove('matched');
+  document.getElementById('gallery-matched-indicator').innerHTML='';
+  document.getElementById('gallery-results').style.display='none';
+  showScreen('screen-home');
+}
+
+// Gallery search
+function searchGalleries(q) {
+  selectedGallery = null;
+  document.getElementById('gallery-name').classList.remove('matched');
+  document.getElementById('gallery-matched-indicator').innerHTML = '';
+  const el = document.getElementById('gallery-results');
+  if (!q || q.length < 1) { el.style.display = 'none'; return; }
+  const results = allGalleries
+    .map(g => ({ g, s: similarity(q, g.gallery_name) }))
+    .filter(x => norm(x.g.gallery_name).includes(norm(q)) || x.s > 0.4)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 6);
+  if (!results.length) { el.style.display = 'none'; return; }
+  el.innerHTML = results.map(({g}) =>
+    `<div class="search-result-item" onclick="selectGallery('${esc(g.gallery_id)}')">
+      ${esc(g.gallery_name)}
+      <div class="search-result-sub">${esc(g.city || '')} · Tier ${g.gallery_tier_score}</div>
+    </div>`
+  ).join('');
+  el.style.display = 'block';
+}
+
+function selectGallery(galleryId) {
+  const gallery = allGalleries.find(g => g.gallery_id === galleryId);
+  if (gallery) {
+    selectedGallery = gallery;
+    document.getElementById('gallery-name').value = gallery.gallery_name.trim();
+    document.getElementById('gallery-name').classList.add('matched');
+    document.getElementById('gallery-results').style.display = 'none';
+    document.getElementById('gallery-matched-indicator').innerHTML =
+      `<div class="gallery-matched-pill">✓ Matched to database</div>`;
+  }
+}
+
+function handleScanClick(inputId) {
+  const galleryVal = document.getElementById('gallery-name').value.trim();
+  if (!galleryVal) {
+    if (!confirm('No gallery or institution entered. Continue without one?')) return;
+  } else if (!selectedGallery) {
+    if (!confirm('"' + galleryVal + '" was not matched to the database. Save as free text?')) return;
+  }
+  document.getElementById(inputId).click();
+}
+
 async function handleFile(input) {
-  const file=input.files[0];if(!file)return;
-  const gallery=document.getElementById('gallery-name').value.trim();
-  if(!gallery){alert('Please enter the gallery name before scanning.');input.value='';return;}
+  const file = input.files[0]; if (!file) return;
   showScreen('screen-processing');
   try {
-    const base64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file);});
-    const res=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64,mimetype:file.type})});
-    if(!res.ok)throw new Error(await res.text());
-    const{lots}=await res.json();
-    if(!lots||lots.length===0){alert('No lots were found. Please try a clearer photo.');showScreen('screen-home');return;}
-    buildGroups(lots);showArtistStep(0);
-  } catch(e){console.error(e);alert('Something went wrong reading the image. Please try again.');showScreen('screen-home');}
+    const base64 = await new Promise((resolve,reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const res = await fetch('/api/scan', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({base64, mimetype: file.type})});
+    if (!res.ok) throw new Error(await res.text());
+    const {lots} = await res.json();
+    if (!lots || lots.length === 0) { alert('No lots found. Please try a clearer photo.'); showScreen('screen-home'); return; }
+    buildGroups(lots); showArtistStep(0);
+  } catch(e) { console.error(e); alert('Something went wrong reading the image. Please try again.'); showScreen('screen-home'); }
 }
-function buildGroups(lots){const map={};for(const lot of lots){const name=(lot.artist_name||'Unknown').trim();if(!map[name])map[name]=[];map[name].push(lot);}artistGroups=Object.entries(map).map(([foundName,grpLots])=>{const{artist,score}=bestMatch(foundName);return{foundName,lots:grpLots,matchedArtist:artist,matchScore:score,confirmedArtistId:null,confirmedName:null};});}
-function showArtistStep(index){currentGroupIndex=index;const g=artistGroups[index];currentMatch=g.matchedArtist;const pct=Math.round((index/artistGroups.length)*100);document.getElementById('artist-screen-title').textContent='Artist '+(index+1)+' of '+artistGroups.length;document.getElementById('artist-progress-label').textContent=index+' of '+artistGroups.length+' artists confirmed';document.getElementById('artist-progress-fill').style.width=pct+'%';document.getElementById('artist-found-name').textContent=g.foundName;const n=g.lots.length;document.getElementById('artist-lot-count').textContent=n+' lot'+(n>1?'s':'')+' on this page';document.getElementById('artist-search').value='';document.getElementById('search-results').style.display='none';renderMatchUI(g.matchedArtist,g.matchScore);showScreen('screen-artist');}
-function renderMatchUI(artist,score){currentMatch=artist;const badge=document.getElementById('match-badge'),nameEl=document.getElementById('artist-db-name'),tagEl=document.getElementById('artist-tag-row');if(!artist){badge.className='match-badge match-low';badge.innerHTML='<span class="match-dot"></span> No match found';nameEl.textContent='Artist not in database';tagEl.innerHTML='';return;}const pct=Math.round(score*100);if(score>=0.85){badge.className='match-badge match-high';badge.innerHTML='<span class="match-dot"></span> '+pct+'% match';}else if(score>=0.6){badge.className='match-badge match-medium';badge.innerHTML='<span class="match-dot"></span> '+pct+'% — please verify';}else{badge.className='match-badge match-low';badge.innerHTML='<span class="match-dot"></span> '+pct+'% — low confidence';}nameEl.textContent=artist.full_name;const tagMap={emerging:['tag-emerging','Emerging'],mid_career:['tag-mid','Mid-career'],established:['tag-established','Established']};const[cls,label]=tagMap[artist.status]||['',''];tagEl.innerHTML=cls?'<span class="tag '+cls+'">'+label+'</span>':'';}
-function searchArtists(q){const el=document.getElementById('search-results');if(!q||q.length<2){el.style.display='none';return;}const results=allArtists.map(a=>({a,s:similarity(q,a.full_name)})).filter(x=>norm(x.a.full_name).includes(norm(q))||x.s>0.4).sort((x,y)=>y.s-x.s).slice(0,8);if(!results.length){el.style.display='none';return;}el.innerHTML=results.map(({a})=>'<div class="search-result-item" onclick="selectArtist(\''+esc(a.artist_id)+'\')">'+esc(a.full_name)+'</div>').join('');el.style.display='block';}
+
+function buildGroups(lots){
+  const map={};
+  for(const lot of lots){const name=(lot.artist_name||'Unknown').trim();if(!map[name])map[name]=[];map[name].push(lot);}
+  artistGroups=Object.entries(map).map(([foundName,grpLots])=>{const{artist,score}=bestMatch(foundName);return{foundName,lots:grpLots,matchedArtist:artist,matchScore:score,confirmedArtistId:null,confirmedName:null};});
+}
+
+function showArtistStep(index){
+  currentGroupIndex=index; const g=artistGroups[index]; currentMatch=g.matchedArtist;
+  const pct=Math.round((index/artistGroups.length)*100);
+  document.getElementById('artist-screen-title').textContent='Artist '+(index+1)+' of '+artistGroups.length;
+  document.getElementById('artist-progress-label').textContent=index+' of '+artistGroups.length+' artists confirmed';
+  document.getElementById('artist-progress-fill').style.width=pct+'%';
+  document.getElementById('artist-found-name').textContent=g.foundName;
+  const n=g.lots.length;
+  document.getElementById('artist-lot-count').textContent=n+' lot'+(n>1?'s':'')+' on this page';
+  document.getElementById('artist-search').value='';
+  document.getElementById('search-results').style.display='none';
+  renderMatchUI(g.matchedArtist,g.matchScore); showScreen('screen-artist');
+}
+
+function renderMatchUI(artist,score){
+  currentMatch=artist;
+  const badge=document.getElementById('match-badge'),nameEl=document.getElementById('artist-db-name'),tagEl=document.getElementById('artist-tag-row');
+  if(!artist){badge.className='match-badge match-low';badge.innerHTML='<span class="match-dot"></span> No match found';nameEl.textContent='Artist not in database';tagEl.innerHTML='';return;}
+  const pct=Math.round(score*100);
+  if(score>=0.85){badge.className='match-badge match-high';badge.innerHTML='<span class="match-dot"></span> '+pct+'% match';}
+  else if(score>=0.6){badge.className='match-badge match-medium';badge.innerHTML='<span class="match-dot"></span> '+pct+'% — please verify';}
+  else{badge.className='match-badge match-low';badge.innerHTML='<span class="match-dot"></span> '+pct+'% — low confidence';}
+  nameEl.textContent=artist.full_name;
+  const tagMap={emerging:['tag-emerging','Emerging'],mid_career:['tag-mid','Mid-career'],established:['tag-established','Established']};
+  const[cls,label]=tagMap[artist.status]||['',''];
+  tagEl.innerHTML=cls?'<span class="tag '+cls+'">'+label+'</span>':'';
+}
+
+function searchArtists(q){
+  const el=document.getElementById('search-results');
+  if(!q||q.length<2){el.style.display='none';return;}
+  const results=allArtists.map(a=>({a,s:similarity(q,a.full_name)})).filter(x=>norm(x.a.full_name).includes(norm(q))||x.s>0.4).sort((x,y)=>y.s-x.s).slice(0,8);
+  if(!results.length){el.style.display='none';return;}
+  el.innerHTML=results.map(({a})=>'<div class="search-result-item" onclick="selectArtist(\''+esc(a.artist_id)+'\')">'+esc(a.full_name)+'</div>').join('');
+  el.style.display='block';
+}
+
 function selectArtist(id){const artist=allArtists.find(a=>a.artist_id===id);if(artist){renderMatchUI(artist,1);document.getElementById('search-results').style.display='none';document.getElementById('artist-search').value='';}}
-function confirmArtist(){if(!currentMatch){if(confirm('No artist matched. Add new artist instead?'))showAddArtist();return;}artistGroups[currentGroupIndex].confirmedArtistId=currentMatch.artist_id;artistGroups[currentGroupIndex].confirmedName=currentMatch.full_name;advanceArtistStep();}
-function advanceArtistStep(){if(currentGroupIndex<artistGroups.length-1){showArtistStep(currentGroupIndex+1);}else{showLotsStep(0);}}
-function showAddArtist(){document.getElementById('new-name').value=artistGroups[currentGroupIndex].foundName;document.getElementById('new-nationality').value='DK';document.getElementById('new-status').value='emerging';document.getElementById('new-birth-year').value='';document.getElementById('new-medium').value='';document.getElementById('new-city').value='';showScreen('screen-add-artist');}
-async function saveNewArtist(){const name=document.getElementById('new-name').value.trim();if(!name){alert('Artist name is required.');return;}const payload={full_name:name,status:document.getElementById('new-status').value,birth_year:document.getElementById('new-birth-year').value||null,nationality:document.getElementById('new-nationality').value.trim()||'DK',primary_medium:document.getElementById('new-medium').value.trim()||null,based_in_city:document.getElementById('new-city').value.trim()||null};try{const res=await fetch('/api/add-artist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await res.json();if(data.error){alert('Error: '+data.error);return;}allArtists.push(data.artist);artistGroups[currentGroupIndex].confirmedArtistId=data.artist.artist_id;artistGroups[currentGroupIndex].confirmedName=data.artist.full_name;advanceArtistStep();}catch(e){alert('Could not save artist.');}}
-function showLotsStep(index){currentLotsIndex=index;const g=artistGroups[index];document.getElementById('lots-artist-name').textContent=g.confirmedName;document.getElementById('lots-sub').textContent=g.lots.length+' lot'+(g.lots.length>1?'s':'')+' · Review and correct if needed';document.getElementById('save-lots-count').textContent=g.lots.length;const container=document.getElementById('lots-container');container.innerHTML=g.lots.map((lot,i)=>`<div class="card"><div class="card-title">Lot ${i+1}${lot.lot_number?' &nbsp;·&nbsp; #'+esc(lot.lot_number):''}</div><div class="field-group"><div class="field-label">Title</div><input type="text" class="field-input" id="l${i}-title" value="${esc(lot.title)}"></div><div class="lot-grid"><div class="field-group"><div class="field-label">Year</div><input type="number" class="field-input" id="l${i}-year" value="${esc(lot.year)}"></div><div class="field-group"><div class="field-label">Lot #</div><input type="text" class="field-input" id="l${i}-lotnr" value="${esc(lot.lot_number)}"></div></div><div class="field-group"><div class="field-label">Medium</div><input type="text" class="field-input" id="l${i}-medium" value="${esc(lot.medium)}"></div><div class="lot-grid"><div class="field-group"><div class="field-label">Height (cm)</div><input type="number" step="0.1" class="field-input" id="l${i}-h" value="${esc(lot.height_cm)}"></div><div class="field-group"><div class="field-label">Width (cm)</div><input type="number" step="0.1" class="field-input" id="l${i}-w" value="${esc(lot.width_cm)}"></div></div><div class="lot-grid"><div class="field-group"><div class="field-label">Price</div><input type="number" class="field-input" id="l${i}-price" value="${esc(lot.price)}"></div><div class="field-group"><div class="field-label">Currency</div><select class="field-input" id="l${i}-cur">${['DKK','EUR','USD','GBP','SEK','NOK'].map(c=>`<option${(lot.currency||'DKK')===c?' selected':''}>${c}</option>`).join('')}</select></div></div></div>`).join('');showScreen('screen-lots');}
-function confirmLots(){const g=artistGroups[currentLotsIndex];const gallery=document.getElementById('gallery-name').value.trim();const city=document.getElementById('gallery-city').value.trim();const lots=g.lots.map((_,i)=>({artist_id:g.confirmedArtistId,gallery_name:gallery,city:city||null,title:document.getElementById(`l${i}-title`).value.trim()||null,year:parseInt(document.getElementById(`l${i}-year`).value)||null,lot_number:document.getElementById(`l${i}-lotnr`).value.trim()||null,medium:document.getElementById(`l${i}-medium`).value.trim()||null,height_cm:parseFloat(document.getElementById(`l${i}-h`).value)||null,width_cm:parseFloat(document.getElementById(`l${i}-w`).value)||null,price:parseFloat(document.getElementById(`l${i}-price`).value)||null,currency:document.getElementById(`l${i}-cur`).value}));pendingLots.push(...lots);if(currentLotsIndex<artistGroups.length-1){showLotsStep(currentLotsIndex+1);}else{submitAll();}}
+
+function confirmArtist(){
+  if(!currentMatch){if(confirm('No artist matched. Add new artist instead?'))showAddArtist();return;}
+  artistGroups[currentGroupIndex].confirmedArtistId=currentMatch.artist_id;
+  artistGroups[currentGroupIndex].confirmedName=currentMatch.full_name;
+  advanceArtistStep();
+}
+
+function advanceArtistStep(){
+  if(currentGroupIndex<artistGroups.length-1){showArtistStep(currentGroupIndex+1);}
+  else{showLotsStep(0);}
+}
+
+function showAddArtist(){
+  document.getElementById('new-name').value=artistGroups[currentGroupIndex].foundName;
+  document.getElementById('new-nationality').value='DK';
+  document.getElementById('new-status').value='emerging';
+  document.getElementById('new-birth-year').value='';
+  document.getElementById('new-medium').value='';
+  document.getElementById('new-city').value='';
+  showScreen('screen-add-artist');
+}
+
+async function saveNewArtist(){
+  const name=document.getElementById('new-name').value.trim();
+  if(!name){alert('Artist name is required.');return;}
+  const payload={full_name:name,status:document.getElementById('new-status').value,birth_year:document.getElementById('new-birth-year').value||null,nationality:document.getElementById('new-nationality').value.trim()||'DK',primary_medium:document.getElementById('new-medium').value.trim()||null,based_in_city:document.getElementById('new-city').value.trim()||null};
+  try{
+    const res=await fetch('/api/add-artist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data.error){alert('Error: '+data.error);return;}
+    allArtists.push(data.artist);
+    artistGroups[currentGroupIndex].confirmedArtistId=data.artist.artist_id;
+    artistGroups[currentGroupIndex].confirmedName=data.artist.full_name;
+    advanceArtistStep();
+  }catch(e){alert('Could not save artist.');}
+}
+
+function showLotsStep(index){
+  currentLotsIndex=index; const g=artistGroups[index];
+  document.getElementById('lots-artist-name').textContent=g.confirmedName;
+  document.getElementById('lots-sub').textContent=g.lots.length+' lot'+(g.lots.length>1?'s':'')+' · Review and correct if needed';
+  document.getElementById('save-lots-count').textContent=g.lots.length;
+  const container=document.getElementById('lots-container');
+  container.innerHTML=g.lots.map((lot,i)=>`
+    <div class="card">
+      <div class="card-title">Lot ${i+1}${lot.lot_number?' &nbsp;·&nbsp; #'+esc(lot.lot_number):''}</div>
+      <div class="field-group"><div class="field-label">Title</div><input type="text" class="field-input" id="l${i}-title" value="${esc(lot.title)}"></div>
+      <div class="lot-grid">
+        <div class="field-group"><div class="field-label">Year</div><input type="number" class="field-input" id="l${i}-year" value="${esc(lot.year)}"></div>
+        <div class="field-group"><div class="field-label">Lot #</div><input type="text" class="field-input" id="l${i}-lotnr" value="${esc(lot.lot_number)}"></div>
+      </div>
+      <div class="field-group"><div class="field-label">Medium</div><input type="text" class="field-input" id="l${i}-medium" value="${esc(lot.medium)}"></div>
+      <div class="lot-grid">
+        <div class="field-group"><div class="field-label">Height (cm)</div><input type="number" step="0.1" class="field-input" id="l${i}-h" value="${esc(lot.height_cm)}"></div>
+        <div class="field-group"><div class="field-label">Width (cm)</div><input type="number" step="0.1" class="field-input" id="l${i}-w" value="${esc(lot.width_cm)}"></div>
+      </div>
+      <div class="lot-grid">
+        <div class="field-group"><div class="field-label">Price</div><input type="number" class="field-input" id="l${i}-price" value="${esc(lot.price)}"></div>
+        <div class="field-group"><div class="field-label">Currency</div><select class="field-input" id="l${i}-cur">${['DKK','EUR','USD','GBP','SEK','NOK'].map(c=>`<option${(lot.currency||'DKK')===c?' selected':''}>${c}</option>`).join('')}</select></div>
+      </div>
+    </div>`).join('');
+  showScreen('screen-lots');
+}
+
+function confirmLots(){
+  const g=artistGroups[currentLotsIndex];
+  const galleryName = selectedGallery ? selectedGallery.gallery_name.trim() : (document.getElementById('gallery-name').value.trim() || null);
+  const city = selectedGallery ? selectedGallery.city : null;
+  const lots=g.lots.map((_,i)=>({
+    artist_id:g.confirmedArtistId,
+    gallery_name: galleryName,
+    city: city,
+    title:document.getElementById(`l${i}-title`).value.trim()||null,
+    year:parseInt(document.getElementById(`l${i}-year`).value)||null,
+    lot_number:document.getElementById(`l${i}-lotnr`).value.trim()||null,
+    medium:document.getElementById(`l${i}-medium`).value.trim()||null,
+    height_cm:parseFloat(document.getElementById(`l${i}-h`).value)||null,
+    width_cm:parseFloat(document.getElementById(`l${i}-w`).value)||null,
+    price:parseFloat(document.getElementById(`l${i}-price`).value)||null,
+    currency:document.getElementById(`l${i}-cur`).value,
+  }));
+  pendingLots.push(...lots);
+  if(currentLotsIndex<artistGroups.length-1){showLotsStep(currentLotsIndex+1);}
+  else{submitAll();}
+}
+
 function goBackToArtist(){showArtistStep(currentLotsIndex);}
-async function submitAll(){showScreen('screen-saving');try{const res=await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lots:pendingLots})});const data=await res.json();if(data.error)throw new Error(data.error);const gallery=document.getElementById('gallery-name').value.trim();const artists=new Set(pendingLots.map(l=>l.artist_id)).size;document.getElementById('done-title').textContent=pendingLots.length+' lots saved';document.getElementById('done-sub').textContent=artists+' artist'+(artists>1?'s':'')+'\n'+gallery;showScreen('screen-done');}catch(e){alert('Save failed: '+e.message);showScreen('screen-home');}}
+
+async function submitAll(){
+  showScreen('screen-saving');
+  try{
+    const res=await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lots:pendingLots})});
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    const galleryName = selectedGallery ? selectedGallery.gallery_name.trim() : (document.getElementById('gallery-name').value.trim() || 'No gallery');
+    const artists=new Set(pendingLots.map(l=>l.artist_id)).size;
+    document.getElementById('done-title').textContent=pendingLots.length+' lots saved';
+    document.getElementById('done-sub').textContent=artists+' artist'+(artists>1?'s':'')+'\n'+galleryName;
+    showScreen('screen-done');
+  }catch(e){alert('Save failed: '+e.message);showScreen('screen-home');}
+}
+
 boot();
 </script>
 </body>
