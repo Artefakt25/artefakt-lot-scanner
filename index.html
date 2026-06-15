@@ -60,7 +60,7 @@
 </head>
 <body>
 
-<div class="screen active" id="screen-home">
+<div class="screen" id="screen-home">
   <div class="header">
     <div class="logo">Artefakt</div>
     <div class="title">Lot Scanner</div>
@@ -185,6 +185,34 @@
 </div>
 
 <script>
+  // PIN protection
+(function() {
+  const PIN = '2025';
+  const key = 'artefakt_auth';
+  if (sessionStorage.getItem(key) !== PIN) {
+    document.body.innerHTML = `
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f5f0;">
+        <div style="text-align:center;padding:40px 20px;max-width:320px;width:100%;">
+          <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#999;margin-bottom:8px;">Artefakt</div>
+          <div style="font-size:22px;font-weight:600;margin-bottom:32px;">Lot Scanner</div>
+          <input id="pin-input" type="password" inputmode="numeric" maxlength="10"
+            style="width:100%;padding:16px;border-radius:14px;border:1.5px solid #e0e0de;font-size:24px;text-align:center;letter-spacing:0.3em;background:#fff;margin-bottom:12px;-webkit-appearance:none;"
+            placeholder="••••" onkeydown="if(event.key==='Enter')checkPin()">
+          <button onclick="checkPin()"
+            style="display:block;width:100%;padding:16px;border-radius:14px;font-size:16px;font-weight:500;border:none;background:#1a1a1a;color:#fff;cursor:pointer;">
+            Enter
+          </button>
+          <div id="pin-error" style="color:#b52a2a;font-size:13px;margin-top:12px;min-height:20px;"></div>
+        </div>
+      </div>`;
+    window.checkPin = function() {
+      const val = document.getElementById('pin-input').value;
+      if (val === PIN) { sessionStorage.setItem(key, PIN); location.reload(); }
+      else { document.getElementById('pin-error').textContent = 'Incorrect PIN'; document.getElementById('pin-input').value = ''; }
+    };
+    return;
+  }
+})();
 let allArtists = [], allGalleries = [], artistGroups = [], currentGroupIndex = 0;
 let currentMatch = null, pendingLots = [], currentLotsIndex = 0;
 let selectedGallery = null;
